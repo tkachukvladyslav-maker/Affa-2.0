@@ -1,0 +1,1475 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROBOLEARN — Winter Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<style>
+:root{
+ --bg:#050a12;
+ --panel:#0a1422;
+ --panel2:#101f30;
+ --line:rgba(135,205,255,.14);
+ --cyan:#70eaff;
+ --blue:#478bff;
+ --green:#6dffc4;
+ --purple:#a58bff;
+ --white:#eff8ff;
+ --muted:#8196aa;
+ --red:#ff7188;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+ background:var(--bg);
+ color:var(--white);
+ font-family:Inter,Arial,sans-serif;
+ min-height:100vh;
+ overflow:hidden;
+}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+#world{
+ position:fixed;inset:0;width:100%;height:100%;
+ z-index:0;display:block;
+}
+#vignette{
+ position:fixed;inset:0;z-index:1;pointer-events:none;
+ background:
+ radial-gradient(ellipse at 50% 45%,transparent 15%,#03071155 75%),
+ linear-gradient(90deg,#050a12 0%,transparent 35%,transparent 70%,#050a12 100%);
+}
+.noise{
+ position:fixed;inset:0;z-index:2;pointer-events:none;
+ opacity:.07;
+ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");
+}
+.topline{
+ position:fixed;top:0;left:0;width:100%;height:3px;
+ z-index:30;background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),transparent);
+ box-shadow:0 0 15px #70eaff66;
+}
+header{
+ position:fixed;top:3px;left:0;width:100%;height:76px;
+ z-index:20;padding:0 4%;
+ display:flex;align-items:center;justify-content:space-between;
+ background:linear-gradient(180deg,#07111eeF,#07111eb0);
+ border-bottom:1px solid var(--line);
+ backdrop-filter:blur(22px);
+}
+.brand{display:flex;align-items:center;gap:13px}
+.brand-icon{
+ width:39px;height:39px;border:1px solid #70eaff77;
+ border-radius:12px;display:grid;place-items:center;
+ color:var(--cyan);font-family:Orbitron;font-weight:900;
+ box-shadow:0 0 25px #70eaff18,inset 0 0 15px #70eaff15;
+}
+.brand-name{
+ font-family:Orbitron;font-size:16px;font-weight:900;
+ letter-spacing:3px;
+}
+.brand-name span{color:var(--cyan)}
+.brand-sub{
+ font-size:8px;letter-spacing:3px;color:var(--muted);
+ margin-top:4px;
+}
+.header-center{
+ display:flex;align-items:center;gap:25px;
+ font-size:10px;letter-spacing:2px;color:var(--muted);
+}
+.live{display:flex;align-items:center;gap:8px}
+.live-dot{
+ width:7px;height:7px;background:var(--green);
+ border-radius:50%;box-shadow:0 0 12px var(--green);
+ animation:pulse 1.5s infinite;
+}
+@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
+.header-right{display:flex;align-items:center;gap:12px}
+.clock{
+ color:#c9d9e8;font:11px Orbitron;
+ letter-spacing:1px;
+}
+.icon-btn{
+ width:38px;height:38px;border:1px solid var(--line);
+ border-radius:10px;background:#ffffff06;color:var(--cyan);
+}
+.icon-btn:hover{background:#70eaff14;border-color:#70eaff77}
+
+/* Layout */
+.sidebar{
+ position:fixed;left:0;top:79px;bottom:0;width:90px;
+ z-index:15;border-right:1px solid var(--line);
+ background:#07111ebf;backdrop-filter:blur(18px);
+ display:flex;flex-direction:column;align-items:center;
+ padding:25px 9px;gap:13px;
+}
+.nav-item{
+ width:66px;height:62px;border:1px solid transparent;
+ background:transparent;color:#72869c;
+ border-radius:13px;display:flex;flex-direction:column;
+ justify-content:center;align-items:center;gap:5px;
+ transition:.25s;
+}
+.nav-item .nav-symbol{font-size:19px}
+.nav-item small{font-size:8px;letter-spacing:1px}
+.nav-item:hover,.nav-item.active{
+ background:linear-gradient(145deg,#153047,#0c1b2c);
+ color:var(--cyan);border-color:#70eaff42;
+ box-shadow:inset 0 0 20px #70eaff0c,0 0 20px #70eaff0a;
+}
+.sidebar-bottom{margin-top:auto}
+.side-version{font:8px Orbitron;color:#526a81;writing-mode:vertical-rl;letter-spacing:2px}
+
+main{
+ position:fixed;left:90px;right:0;top:79px;bottom:0;
+ z-index:5;overflow:hidden;
+}
+.page{
+ position:absolute;inset:0;overflow-y:auto;
+ padding:35px 4.2% 45px;
+ opacity:0;visibility:hidden;transform:translateY(18px) scale(.99);
+ transition:opacity .45s,transform .55s,visibility .45s;
+ scrollbar-width:thin;scrollbar-color:#25425c transparent;
+}
+.page.active{
+ opacity:1;visibility:visible;transform:translateY(0) scale(1);
+}
+.page-inner{max-width:1450px;margin:auto}
+.kicker{
+ font:10px Orbitron;letter-spacing:3px;color:var(--cyan);
+ margin-bottom:15px;
+}
+.page-title{
+ font:700 clamp(25px,3vw,43px)/1.2 Orbitron;
+ letter-spacing:-1.5px;margin-bottom:13px;
+}
+.page-title span{color:var(--cyan)}
+.subtitle{
+ color:var(--muted);font-size:13px;line-height:1.8;
+ max-width:650px;
+}
+.section-head{
+ display:flex;align-items:flex-end;justify-content:space-between;
+ gap:20px;margin-bottom:27px;
+}
+.eyebrow{
+ font:9px Orbitron;letter-spacing:2px;color:#68859e;
+}
+.glass{
+ background:linear-gradient(145deg,#112237dd,#081422e8);
+ border:1px solid var(--line);border-radius:17px;
+ box-shadow:0 18px 55px #0003,inset 0 1px #ffffff09;
+}
+.panel{padding:23px}
+.panel-title{
+ font:600 12px Orbitron;letter-spacing:1px;margin-bottom:15px;
+}
+.muted{color:var(--muted)}
+.cyan{color:var(--cyan)}
+.green{color:var(--green)}
+.purple{color:var(--purple)}
+.small{font-size:10px}
+.btn{
+ border:1px solid #70eaff66;
+ background:linear-gradient(110deg,#70eaff,#7f9fff);
+ color:#05111c;border-radius:9px;padding:13px 19px;
+ font-weight:800;font-size:10px;letter-spacing:1.5px;
+ transition:.25s;
+}
+.btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px #70eaff33}
+.btn-outline{
+ background:#0e2032;color:var(--cyan);
+ border:1px solid #70eaff44;
+}
+.btn-outline:hover{background:#17354c}
+.btn-danger{background:#361827;color:#ff8da0;border-color:#ff718855}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.pill{
+ display:inline-flex;align-items:center;gap:7px;
+ border:1px solid var(--line);border-radius:100px;
+ padding:7px 11px;font-size:9px;color:#a9c2d5;
+ letter-spacing:1px;
+}
+.pill-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* Dashboard */
+.dashboard{
+ display:grid;grid-template-columns:minmax(0,1fr) 285px;
+ gap:20px;min-height:calc(100vh - 150px);
+}
+.hero-panel{
+ min-height:500px;position:relative;overflow:hidden;
+ display:flex;align-items:center;padding:45px;
+}
+.hero-panel:before{
+ content:"";position:absolute;width:500px;height:500px;
+ border-radius:50%;right:3%;top:0;
+ background:radial-gradient(circle,#70eaff12,transparent 70%);
+}
+.hero-copy{position:relative;z-index:3;max-width:470px}
+.hero-copy h1{
+ font:800 clamp(36px,5.3vw,70px)/1.07 Orbitron;
+ letter-spacing:-3px;margin:20px 0;
+}
+.hero-copy h1 span{
+ color:var(--cyan);text-shadow:0 0 40px #70eaff55;
+}
+.hero-copy p{font-size:13px;line-height:1.9;color:#a2b6c8;max-width:410px}
+.hero-tag{display:flex;align-items:center;gap:9px;color:var(--cyan);font:9px Orbitron;letter-spacing:2px}
+.hero-stats{
+ display:flex;gap:22px;margin-top:30px;flex-wrap:wrap;
+}
+.hero-stat strong{display:block;font:17px Orbitron;color:#fff}
+.hero-stat span{font-size:9px;color:var(--muted);letter-spacing:1px}
+.robot-hint{
+ position:absolute;right:5%;bottom:22px;
+ font:9px Orbitron;letter-spacing:2px;color:#7894ac;
+ z-index:4;
+}
+.hero-side{display:flex;flex-direction:column;gap:15px}
+.status-card{padding:20px}
+.status-top{display:flex;justify-content:space-between;align-items:center}
+.status-number{font:28px Orbitron;color:var(--cyan);margin:12px 0 5px}
+.meter{height:5px;border-radius:20px;background:#23394d;overflow:hidden;margin-top:13px}
+.meter span{display:block;height:100%;background:linear-gradient(90deg,#478bff,#70eaff);border-radius:20px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{
+ padding:17px;border:1px solid var(--line);border-radius:13px;
+ background:#0b1a29;
+}
+.metric strong{font:20px Orbitron;color:#fff;display:block;margin-bottom:6px}
+.metric small{font-size:9px;color:var(--muted)}
+.activity{padding:18px}
+.activity-row{
+ display:flex;align-items:center;gap:10px;
+ padding:11px 0;border-bottom:1px solid #ffffff0c;
+}
+.activity-row:last-child{border:0}
+.activity-icon{
+ width:30px;height:30px;border-radius:9px;
+ background:#17354a;display:grid;place-items:center;color:var(--cyan);
+}
+.activity-row strong{font-size:10px;display:block}
+.activity-row small{font-size:9px;color:var(--muted)}
+
+/* Lab */
+.lab-grid{
+ display:grid;grid-template-columns:1.2fr .8fr;gap:18px;
+}
+.lab-visual{
+ min-height:390px;position:relative;overflow:hidden;
+ display:flex;align-items:center;justify-content:center;
+}
+.lab-visual:before{
+ content:"";position:absolute;width:330px;height:330px;
+ border:1px solid #70eaff20;border-radius:50%;
+ box-shadow:0 0 60px #70eaff0b,inset 0 0 50px #70eaff08;
+}
+.lab-visual:after{
+ content:"";position:absolute;width:430px;height:430px;
+ border:1px dashed #70eaff1b;border-radius:50%;
+ animation:spin 35s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lab-label{
+ position:absolute;font:9px Orbitron;letter-spacing:2px;color:#83a2bb;
+}
+.lab-label.top{top:25px;left:25px}
+.lab-label.bottom{bottom:25px;right:25px}
+.lab-controls{display:flex;flex-direction:column;gap:14px}
+.control-row{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:10px;padding:13px 0;border-bottom:1px solid #ffffff0c;
+ font-size:11px;
+}
+.switch{
+ width:39px;height:22px;border-radius:30px;
+ background:#26394b;border:0;padding:3px;transition:.2s;
+}
+.switch:after{
+ content:"";display:block;width:16px;height:16px;
+ border-radius:50%;background:#90a7ba;transition:.2s;
+}
+.switch.on{background:#1d7e72}
+.switch.on:after{transform:translateX(17px);background:#8dffe0}
+.readout{
+ display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+ margin-top:14px;
+}
+.readout div{padding:13px;background:#091725;border:1px solid var(--line);border-radius:10px}
+.readout b{display:block;font:17px Orbitron;color:var(--cyan)}
+.readout small{font-size:8px;color:var(--muted)}
+
+/* Learning */
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.module{
+ padding:22px;min-height:205px;position:relative;overflow:hidden;
+ transition:.3s;cursor:pointer;
+}
+.module:hover{transform:translateY(-5px);border-color:#70eaff66}
+.module-number{font:10px Orbitron;color:var(--cyan);letter-spacing:2px}
+.module-icon{
+ width:46px;height:46px;border-radius:13px;
+ display:grid;place-items:center;font-size:22px;
+ background:linear-gradient(145deg,#183b55,#102338);
+ border:1px solid #70eaff2b;margin:20px 0 15px;
+}
+.module h3{font:600 13px Orbitron;margin-bottom:9px}
+.module p{font-size:10px;line-height:1.7;color:var(--muted)}
+.module-arrow{position:absolute;right:20px;bottom:20px;color:var(--cyan)}
+.module-detail{
+ margin-top:18px;padding:22px;display:none;
+ animation:appear .3s ease;
+}
+.module-detail.show{display:block}
+@keyframes appear{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Simulator */
+.sim-layout{display:grid;grid-template-columns:1fr 330px;gap:18px}
+.sim-stage{
+ min-height:410px;display:flex;align-items:center;
+ justify-content:center;position:relative;overflow:hidden;
+ background:
+ radial-gradient(ellipse at 50% 80%,#16426755,transparent 55%),
+ linear-gradient(145deg,#0e1e30,#07111d);
+}
+.sim-board{
+ width:min(440px,85%);aspect-ratio:1.6;
+ background:linear-gradient(145deg,#08745e,#06473d);
+ border:5px solid #299b7f;border-radius:17px;
+ box-shadow:0 30px 65px #0009,inset 0 0 35px #7fffd322;
+ position:relative;transform:rotateX(12deg) rotateZ(-4deg);
+}
+.sim-board:before{
+ content:"";position:absolute;inset:12px;
+ border:1px dashed #a8ffe755;border-radius:8px;
+}
+.sim-chip{
+ position:absolute;width:100px;height:83px;
+ left:40%;top:35%;border-radius:8px;
+ background:linear-gradient(145deg,#202a37,#050a10);
+ border:5px solid #75828b;box-shadow:inset 0 0 15px #000;
+}
+.sim-usb{
+ position:absolute;left:-19px;top:35%;
+ width:48px;height:55px;background:linear-gradient(90deg,#becbd4,#526777);
+ border:3px solid #e2edf4;border-radius:6px;
+}
+.sim-led{
+ position:absolute;width:13px;height:13px;border-radius:50%;
+ background:#203c43;border:2px solid #a1b9b9;
+ box-shadow:0 0 0 transparent;transition:.2s;
+}
+.sim-led.l1{top:23%;right:17%}
+.sim-led.l2{top:23%;right:25%}
+.sim-led.l3{top:23%;right:33%}
+.sim-led.active{background:#6dffc4;box-shadow:0 0 23px #6dffc4}
+.sim-label{
+ position:absolute;bottom:12%;left:30%;
+ font:11px Orbitron;color:#b8fff0;letter-spacing:3px;
+}
+.sim-panel{padding:23px}
+.sim-panel h3{font:600 12px Orbitron;margin-bottom:14px}
+.sim-action{
+ width:100%;padding:13px;margin:6px 0;
+ border:1px solid var(--line);background:#10253a;
+ color:#d7ebf9;border-radius:9px;text-align:left;font-size:10px;
+}
+.sim-action:hover{border-color:#70eaff77;color:var(--cyan)}
+.sim-log{
+ background:#050d17;border:1px solid #ffffff10;border-radius:10px;
+ padding:13px;margin-top:15px;min-height:95px;
+ font:10px/1.8 Consolas,monospace;color:#81e8c5;
+}
+
+/* Code */
+.code-layout{display:grid;grid-template-columns:1fr .7fr;gap:18px}
+.code-editor{
+ background:#07101b;border:1px solid #70eaff25;border-radius:14px;
+ overflow:hidden;
+}
+.editor-head{
+ height:43px;padding:0 15px;display:flex;
+ align-items:center;justify-content:space-between;
+ background:#102034;border-bottom:1px solid var(--line);
+ font:10px Orbitron;color:#a7bdcf;
+}
+.editor-dots{display:flex;gap:5px}
+.editor-dots i{width:7px;height:7px;border-radius:50%;background:#ff7188}
+.editor-dots i:nth-child(2){background:#ffd37c}
+.editor-dots i:nth-child(3){background:#6dffc4}
+pre{
+ padding:23px;overflow:auto;color:#c6e6f9;
+ font:12px/2 Consolas,monospace;white-space:pre;
+}
+.kw{color:#c39cff}.fn{color:#70eaff}.num{color:#ffcb7a}.comment{color:#64809a}
+.code-info{display:flex;flex-direction:column;gap:12px}
+.code-info .panel p{font-size:11px;line-height:1.8}
+.code-info strong{color:var(--cyan)}
+
+/* Roadmap */
+.timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.phase{padding:21px;position:relative}
+.phase-index{font:25px Orbitron;color:var(--cyan)}
+.phase h3{font:600 12px Orbitron;margin:14px 0 9px}
+.phase p{font-size:10px;line-height:1.8;color:var(--muted)}
+.phase-line{height:2px;background:linear-gradient(90deg,var(--cyan),transparent);margin:17px 0}
+.vision{
+ margin-top:18px;padding:27px;
+ display:flex;align-items:center;justify-content:space-between;gap:20px;
+ background:linear-gradient(100deg,#102b40,#111c36);
+ border:1px solid #70eaff33;border-radius:16px;
+}
+.vision h3{font:600 17px Orbitron;margin-bottom:9px}
+.vision p{font-size:11px;color:var(--muted)}
+
+/* Footer */
+.bottom-status{
+ position:fixed;left:90px;right:0;bottom:0;height:34px;
+ z-index:20;display:flex;align-items:center;justify-content:space-between;
+ padding:0 4%;background:#07111eeF;
+ border-top:1px solid var(--line);font-size:8px;
+ letter-spacing:1.5px;color:#70889e;
+}
+.status-left,.status-right{display:flex;align-items:center;gap:18px}
+.status-led{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px}
+.toast{
+ position:fixed;bottom:55px;left:50%;transform:translate(-50%,15px);
+ opacity:0;pointer-events:none;z-index:100;
+ padding:13px 20px;background:#12372f;color:#8bffce;
+ border:1px solid #6dffc477;border-radius:10px;
+ font-size:11px;transition:.3s;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal-backdrop{
+ position:fixed;inset:0;z-index:60;background:#020711c9;
+ backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;
+ padding:20px;
+}
+.modal-backdrop.open{display:flex}
+.modal{
+ width:min(540px,100%);padding:28px;
+ background:#0b1929;border:1px solid #70eaff55;
+ border-radius:18px;box-shadow:0 25px 90px #000b;
+}
+.modal h2{font:700 21px Orbitron;margin-bottom:12px}
+.modal p{font-size:12px;line-height:1.8;color:var(--muted)}
+.modal-close{float:right;background:none;border:0;color:#a9bfd0;font-size:22px}
+
+/* Winter decor */
+.winter-lights{
+ position:fixed;right:17px;top:90px;z-index:10;
+ display:flex;gap:8px;pointer-events:none;
+}
+.winter-lights i{
+ width:5px;height:10px;border-radius:50%;
+ background:#70eaff;box-shadow:0 0 12px currentColor;
+ animation:pulse 1.4s infinite alternate;
+}
+.winter-lights i:nth-child(2){background:#ff7188;animation-delay:.4s}
+.winter-lights i:nth-child(3){background:#ffe18b;animation-delay:.8s}
+.winter-lights i:nth-child(4){background:#6dffc4;animation-delay:1.1s}
+.corner-tree{
+ position:fixed;right:22px;bottom:40px;z-index:3;
+ width:64px;height:100px;pointer-events:none;opacity:.65;
+}
+.corner-tree:before{
+ content:"";position:absolute;left:32px;top:3px;
+ border-left:31px solid transparent;border-right:31px solid transparent;
+ border-bottom:80px solid #0d6659;
+ filter:drop-shadow(0 0 13px #6dffc433);
+}
+.corner-tree:after{
+ content:"";position:absolute;left:27px;bottom:0;width:10px;height:20px;
+ background:#795137;
+}
+@media(max-width:1000px){
+ .dashboard{grid-template-columns:1fr}
+ .hero-panel{min-height:430px}
+ .hero-side{display:grid;grid-template-columns:1fr 1fr}
+ .lab-grid,.sim-layout,.code-layout{grid-template-columns:1fr}
+ .module-grid{grid-template-columns:repeat(2,1fr)}
+ .timeline{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:700px){
+ header{padding:0 15px;height:65px}
+ .header-center{display:none}
+ .brand-name{font-size:12px}
+ .sidebar{top:68px;width:58px;padding:15px 4px}
+ .nav-item{width:48px;height:52px}
+ .nav-item small{font-size:7px}
+ main{left:58px;top:68px}
+ .page{padding:24px 15px 55px}
+ .bottom-status{left:58px;padding:0 12px}
+ .status-right{display:none}
+ .hero-panel{padding:25px;min-height:500px;align-items:flex-start}
+ .hero-copy h1{font-size:38px}
+ .hero-side{grid-template-columns:1fr 1fr}
+ .module-grid{grid-template-columns:1fr}
+ .timeline{grid-template-columns:1fr}
+ .vision{align-items:flex-start;flex-direction:column}
+ .corner-tree{display:none}
+ .readout{grid-template-columns:1fr 1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+
+<body>
+<div class="topline"></div>
+<canvas id="world"></canvas>
+<div id="vignette"></div>
+<div class="noise"></div>
+
+<header>
+ <div class="brand">
+  <div class="brand-icon">R</div>
+  <div>
+   <div class="brand-name">ROBO<span>LEARN</span></div>
+   <div class="brand-sub">INTERACTIVE TECHNOLOGY LAB</div>
+  </div>
+ </div>
+ <div class="header-center">
+  <div class="live"><span class="live-dot"></span> SYSTEM ONLINE</div>
+  <div>WINTER RESEARCH DIVISION</div>
+  <div>BUILD 2026.11</div>
+ </div>
+ <div class="header-right">
+  <div class="clock" id="clock">00:00:00</div>
+  <button class="icon-btn" onclick="toggleSound()" title="Звук">♪</button>
+  <button class="icon-btn" onclick="fullscreen()" title="На весь екран">⛶</button>
+ </div>
+</header>
+
+<aside class="sidebar">
+ <button class="nav-item active" data-page="home" onclick="navigate('home',this)">
+  <span class="nav-symbol">⌂</span><small>HOME</small>
+ </button>
+ <button class="nav-item" data-page="lab" onclick="navigate('lab',this)">
+  <span class="nav-symbol">◉</span><small>LAB</small>
+ </button>
+ <button class="nav-item" data-page="learn" onclick="navigate('learn',this)">
+  <span class="nav-symbol">▤</span><small>LEARN</small>
+ </button>
+ <button class="nav-item" data-page="sim" onclick="navigate('sim',this)">
+  <span class="nav-symbol">⌘</span><small>SIM</small>
+ </button>
+ <button class="nav-item" data-page="code" onclick="navigate('code',this)">
+  <span class="nav-symbol">⌨</span><small>CODE</small>
+ </button>
+ <button class="nav-item" data-page="future" onclick="navigate('future',this)">
+  <span class="nav-symbol">↗</span><small>FUTURE</small>
+ </button>
+ <div class="sidebar-bottom">
+  <div class="side-version">ROBOLEARN / 01</div>
+ </div>
+</aside>
+
+<div class="winter-lights"><i></i><i></i><i></i><i></i></div>
+<div class="corner-tree"></div>
+
+<main>
+
+<!-- HOME -->
+<section class="page active" id="page-home">
+ <div class="page-inner dashboard">
+  <div class="glass hero-panel">
+   <div class="hero-copy">
+    <div class="hero-tag"><span class="live-dot"></span> THE FUTURE IS INTERACTIVE</div>
+    <h1>LEARN.<br>BUILD.<br><span>CREATE.</span></h1>
+    <p>
+     Вітаємо у ROBOLEARN — інтерактивному просторі,
+     де програмування зустрічається з робототехнікою.
+     Досліджуй технології, експериментуй та створюй
+     власні інженерні рішення.
+    </p>
+    <div class="btn-row">
+     <button class="btn" onclick="navigate('lab')">УВІЙТИ В ЛАБОРАТОРІЮ ↗</button>
+     <button class="btn btn-outline" onclick="navigate('learn')">ПОЧАТИ НАВЧАННЯ</button>
+    </div>
+    <div class="hero-stats">
+     <div class="hero-stat"><strong>06</strong><span>МОДУЛІВ</span></div>
+     <div class="hero-stat"><strong>∞</strong><span>МОЖЛИВОСТЕЙ</span></div>
+     <div class="hero-stat"><strong>01</strong><span>ТВОЯ ІДЕЯ</span></div>
+    </div>
+   </div>
+   <div class="robot-hint">↖ DRAG TO EXPLORE 3D OBJECT</div>
+  </div>
+
+  <div class="hero-side">
+   <div class="glass status-card">
+    <div class="status-top">
+     <span class="eyebrow">LAB STATUS</span>
+     <span class="pill"><span class="pill-dot"></span> ACTIVE</span>
+    </div>
+    <div class="status-number">98.7%</div>
+    <div class="small muted">Стабільність системи</div>
+    <div class="meter"><span style="width:98.7%"></span></div>
+   </div>
+
+   <div class="metric-grid">
+    <div class="metric"><strong>24°C</strong><small>CORE TEMP</small></div>
+    <div class="metric"><strong>5V</strong><small>POWER INPUT</small></div>
+    <div class="metric"><strong>128</strong><small>DATA POINTS</small></div>
+    <div class="metric"><strong>ON</strong><small>AI MODULE</small></div>
+   </div>
+
+   <div class="glass activity">
+    <div class="panel-title">SYSTEM ACTIVITY</div>
+    <div class="activity-row">
+     <div class="activity-icon">◈</div>
+     <div><strong>3D ENGINE READY</strong><small>Visual system initialized</small></div>
+    </div>
+    <div class="activity-row">
+     <div class="activity-icon">⌘</div>
+     <div><strong>ARDUINO MODULE</strong><small>Connection simulated</small></div>
+    </div>
+    <div class="activity-row">
+     <div class="activity-icon">✧</div>
+     <div><strong>WINTER MODE</strong><small>Atmosphere enabled</small></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- LAB -->
+<section class="page" id="page-lab">
+ <div class="page-inner">
+  <div class="section-head">
+   <div>
+    <div class="kicker">01 / CENTRAL CONTROL</div>
+    <h2 class="page-title">ROBOT <span>LABORATORY</span></h2>
+    <p class="subtitle">Керуй демонстраційним роботом, змінюй його режими та спостерігай за реакцією системи.</p>
+   </div>
+   <div class="pill"><span class="pill-dot"></span> ROBOT CONNECTED</div>
+  </div>
+
+  <div class="lab-grid">
+   <div class="glass lab-visual">
+    <div class="lab-label top">UNIT 001 / PROTOTYPE</div>
+    <div class="lab-label bottom">3D INTERACTIVE MODEL</div>
+   </div>
+   <div class="glass panel lab-controls">
+    <div>
+     <div class="panel-title">ROBOT CONTROL</div>
+     <p class="small muted">Система керування прототипом</p>
+    </div>
+    <div class="control-row"><span>Живлення</span><button class="switch on" id="powerSwitch" onclick="togglePower()"></button></div>
+    <div class="control-row"><span>Підсвічування</span><button class="switch on" id="lightSwitch" onclick="toggleLight()"></button></div>
+    <div class="control-row"><span>Зимовий режим</span><button class="switch on" id="winterSwitch" onclick="toggleWinter()"></button></div>
+    <div class="control-row"><span>Режим сканування</span><button class="switch" id="scanSwitch" onclick="toggleScan()"></button></div>
+    <div class="readout">
+     <div><b id="tempValue">24.0°</b><small>TEMP</small></div>
+     <div><b id="voltValue">5.0V</b><small>POWER</small></div>
+     <div><b id="signalValue">99%</b><small>SIGNAL</small></div>
+    </div>
+    <div class="btn-row">
+     <button class="btn" onclick="robotAction('Привіт! Я ROBO, твій помічник у світі робототехніки.')">ПРИВІТАННЯ</button>
+     <button class="btn btn-outline" onclick="robotAction('Виконую діагностику системи. Усі демонстраційні модулі активні.')">ДІАГНОСТИКА</button>
+    </div>
+    <p class="small muted" id="robotMessage">Система готова до команд.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- LEARN -->
+<section class="page" id="page-learn">
+ <div class="page-inner">
+  <div class="kicker">02 / KNOWLEDGE CENTER</div>
+  <h2 class="page-title">EXPLORE <span>THE KNOWLEDGE</span></h2>
+  <p class="subtitle">Навчальна система ROBOLEARN — від першого світлодіода до складних роботизованих систем.</p>
+
+  <div class="module-grid" style="margin-top:27px">
+   <article class="glass module" onclick="openModule(1)">
+    <div class="module-number">MODULE 01</div>
+    <div class="module-icon">⌘</div>
+    <h3>ARDUINO BASICS</h3>
+    <p>Знайомство з платою, контактами, живленням та основами електроніки.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+   <article class="glass module" onclick="openModule(2)">
+    <div class="module-number">MODULE 02</div>
+    <div class="module-icon">◉</div>
+    <h3>LED & LIGHT</h3>
+    <p>Світлодіоди, резистори, PWM та керування яскравістю.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+   <article class="glass module" onclick="openModule(3)">
+    <div class="module-number">MODULE 03</div>
+    <div class="module-icon">⌁</div>
+    <h3>SENSORS</h3>
+    <p>Датчики температури, освітлення, відстані та вологості.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+   <article class="glass module" onclick="openModule(4)">
+    <div class="module-number">MODULE 04</div>
+    <div class="module-icon">⌨</div>
+    <h3>PROGRAMMING</h3>
+    <p>Змінні, умови, цикли, функції та логіка програмування.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+   <article class="glass module" onclick="openModule(5)">
+    <div class="module-number">MODULE 05</div>
+    <div class="module-icon">⚙</div>
+    <h3>ROBOTICS</h3>
+    <p>Мотори, сервоприводи, механізми та системи автоматизації.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+   <article class="glass module" onclick="openModule(6)">
+    <div class="module-number">MODULE 06</div>
+    <div class="module-icon">✧</div>
+    <h3>SMART PROJECTS</h3>
+    <p>Створення власних інженерних проєктів та прототипів.</p>
+    <span class="module-arrow">↗</span>
+   </article>
+  </div>
+
+  <div class="glass module-detail" id="moduleDetail">
+   <div class="section-head">
+    <div><div class="kicker" id="moduleNumber">MODULE</div><h3 class="panel-title" id="moduleTitle">Назва</h3></div>
+    <button class="icon-btn" onclick="closeModule()">✕</button>
+   </div>
+   <p class="subtitle" id="moduleDescription"></p>
+   <div class="btn-row"><button class="btn" onclick="markModule()">ПОЗНАЧИТИ ЯК ВИВЧЕНИЙ ✓</button></div>
+   <p class="small green" id="moduleResult" style="margin-top:12px"></p>
+  </div>
+ </div>
+</section>
+
+<!-- SIMULATOR -->
+<section class="page" id="page-sim">
+ <div class="page-inner">
+  <div class="kicker">03 / INTERACTIVE ENGINEERING</div>
+  <h2 class="page-title">CIRCUIT <span>SIMULATOR</span></h2>
+  <p class="subtitle">Спробуй керувати віртуальною схемою. Натискай кнопки та спостерігай за світлодіодами.</p>
+
+  <div class="sim-layout" style="margin-top:25px">
+   <div class="glass sim-stage">
+    <div class="sim-board">
+     <div class="sim-usb"></div>
+     <div class="sim-chip"></div>
+     <div class="sim-led l1" id="led1"></div>
+     <div class="sim-led l2" id="led2"></div>
+     <div class="sim-led l3" id="led3"></div>
+     <div class="sim-label">ROBOLEARN BOARD</div>
+    </div>
+   </div>
+   <div class="glass sim-panel">
+    <h3>LED CONTROL CENTER</h3>
+    <p class="small muted">Вибери світлодіод для керування</p>
+    <button class="sim-action" onclick="setLed(1)">01 / LED RED — УВІМКНУТИ</button>
+    <button class="sim-action" onclick="setLed(2)">02 / LED BLUE — УВІМКНУТИ</button>
+    <button class="sim-action" onclick="setLed(3)">03 / LED GREEN — УВІМКНУТИ</button>
+    <button class="sim-action" onclick="allLeds()">ВИМКНУТИ ВСІ СВІТЛОДІОДИ</button>
+    <button class="sim-action" onclick="ledSequence()">▶ ЗАПУСТИТИ СВІТЛОВЕ ШОУ</button>
+    <div class="sim-log" id="simLog">SYSTEM READY<br>Waiting for user command...</div>
+    <div class="readout">
+     <div><b id="ledCount">0</b><small>ACTIVE LED</small></div>
+     <div><b>5V</b><small>VOLTAGE</small></div>
+     <div><b id="ledStatus">OFF</b><small>STATUS</small></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- CODE -->
+<section class="page" id="page-code">
+ <div class="page-inner">
+  <div class="kicker">04 / DEVELOPER WORKSPACE</div>
+  <h2 class="page-title">CODE <span>STATION</span></h2>
+  <p class="subtitle">Приклад програми Arduino для миготіння світлодіода. Скопіюй код і спробуй запустити його в Arduino IDE або Tinkercad.</p>
+
+  <div class="code-layout" style="margin-top:25px">
+   <div class="code-editor">
+    <div class="editor-head">
+     <div style="display:flex;align-items:center;gap:12px">
+      <div class="editor-dots"><i></i><i></i><i></i></div>
+      <span>BLINK.ino</span>
+     </div>
+     <span>ARDUINO C++</span>
+    </div>
+    <pre id="codeText"><span class="kw">void</span> <span class="fn">setup</span>() {
+  <span class="fn">pinMode</span>(<span class="num">13</span>, OUTPUT);
+}
+
+<span class="kw">void</span> <span class="fn">loop</span>() {
+  <span class="fn">digitalWrite</span>(<span class="num">13</span>, HIGH);
+  <span class="fn">delay</span>(<span class="num">1000</span>);
+
+  <span class="fn">digitalWrite</span>(<span class="num">13</span>, LOW);
+  <span class="fn">delay</span>(<span class="num">1000</span>);
+}</pre>
+    <div class="editor-head">
+     <span>● READY TO COPY</span>
+     <button class="btn" onclick="copyCode()">COPY CODE</button>
+    </div>
+   </div>
+   <div class="code-info">
+    <div class="glass panel">
+     <div class="panel-title">01 / SETUP</div>
+     <p><strong>pinMode(13, OUTPUT)</strong> налаштовує контакт 13 як вихід, до якого можна підключити світлодіод.</p>
+    </div>
+    <div class="glass panel">
+     <div class="panel-title">02 / LOOP</div>
+     <p>Функція <strong>loop()</strong> постійно повторює команди, поки Arduino увімкнена.</p>
+    </div>
+    <div class="glass panel">
+     <div class="panel-title">03 / RESULT</div>
+     <p>Світлодіод вмикається на одну секунду, вимикається на одну секунду і повторює цикл.</p>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- FUTURE -->
+<section class="page" id="page-future">
+ <div class="page-inner">
+  <div class="kicker">05 / THE NEXT GENERATION</div>
+  <h2 class="page-title">BUILDING <span>THE FUTURE</span></h2>
+  <p class="subtitle">ROBOLEARN — це концепція платформи, яку можна розвивати від навчального сайту до повноцінної спільноти винахідників.</p>
+
+  <div class="timeline" style="margin-top:30px">
+   <div class="glass phase">
+    <div class="phase-index">01</div>
+    <div class="phase-line"></div>
+    <h3>FOUNDATION</h3>
+    <p>Базові уроки, навчальна програма, перші тести та бібліотека прикладів.</p>
+   </div>
+   <div class="glass phase">
+    <div class="phase-index">02</div>
+    <div class="phase-line"></div>
+    <h3>SIMULATION</h3>
+    <p>Інтерактивні схеми, віртуальні компоненти та практичні завдання.</p>
+   </div>
+   <div class="glass phase">
+    <div class="phase-index">03</div>
+    <div class="phase-line"></div>
+    <h3>COMMUNITY</h3>
+    <p>Профілі, досягнення, публікація проєктів та командна робота.</p>
+   </div>
+   <div class="glass phase">
+    <div class="phase-index">04</div>
+    <div class="phase-line"></div>
+    <h3>ECOSYSTEM</h3>
+    <p>Розширені симуляції, складні роботизовані системи та нові курси.</p>
+   </div>
+  </div>
+
+  <div class="vision">
+   <div>
+    <h3>ONE IDEA CAN CHANGE EVERYTHING.</h3>
+    <p>Ми хочемо зробити робототехніку доступною, зрозумілою та цікавою для кожного.</p>
+   </div>
+   <button class="btn" onclick="navigate('home')">ПОВЕРНУТИСЯ НА ГОЛОВНУ ↗</button>
+  </div>
+ </div>
+</section>
+
+</main>
+
+<div class="bottom-status">
+ <div class="status-left">
+  <span><i class="status-led"></i>ALL SYSTEMS OPERATIONAL</span>
+  <span>ROBOLEARN CORE</span>
+ </div>
+ <div class="status-right">
+  <span>WINTER LAB / UKRAINE</span>
+  <span>© 2026 ROBOLEARN</span>
+ </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="modal">
+ <div class="modal">
+  <button class="modal-close" onclick="closeModal()">×</button>
+  <div class="kicker">ROBOLEARN / KNOWLEDGE MODULE</div>
+  <h2 id="modalTitle">MODULE</h2>
+  <p id="modalText"></p>
+  <div class="btn-row">
+   <button class="btn" onclick="closeModal()">ЗРОЗУМІЛО</button>
+  </div>
+ </div>
+</div>
+
+<script>
+/* NAVIGATION */
+const pageNames=['home','lab','learn','sim','code','future'];
+function navigate(name,button){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ const target=document.getElementById('page-'+name);
+ if(!target)return;
+ target.classList.add('active');
+ document.querySelectorAll('.nav-item').forEach(b=>{
+  b.classList.toggle('active',b.dataset.page===name);
+ });
+ target.scrollTop=0;
+}
+document.addEventListener('keydown',e=>{
+ if(e.altKey&&e.key==='ArrowRight'){
+  const current=pageNames.findIndex(n=>document.getElementById('page-'+n).classList.contains('active'));
+  navigate(pageNames[Math.min(current+1,pageNames.length-1)]);
+ }
+ if(e.altKey&&e.key==='ArrowLeft'){
+  const current=pageNames.findIndex(n=>document.getElementById('page-'+n).classList.contains('active'));
+  navigate(pageNames[Math.max(current-1,0)]);
+ }
+});
+function fullscreen(){
+ if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+ else document.exitFullscreen?.();
+}
+
+/* CLOCK */
+function updateClock(){
+ document.getElementById('clock').textContent=
+ new Date().toLocaleTimeString('uk-UA',{hour12:false});
+}
+setInterval(updateClock,1000);updateClock();
+
+/* TOAST */
+function toast(message){
+ const el=document.getElementById('toast');
+ el.textContent=message;el.classList.add('show');
+ setTimeout(()=>el.classList.remove('show'),2300);
+}
+
+/* ROBOT CONTROLS */
+let robotPower=true,robotLight=true,winter=true,scan=false;
+function setSwitch(id,on){
+ document.getElementById(id).classList.toggle('on',on);
+}
+function togglePower(){
+ robotPower=!robotPower;setSwitch('powerSwitch',robotPower);
+ robotAction(robotPower?'Живлення відновлено.':'Робота переведено в режим очікування.');
+}
+function toggleLight(){
+ robotLight=!robotLight;setSwitch('lightSwitch',robotLight);
+ if(window.robotSetLight)window.robotSetLight(robotLight);
+ robotAction(robotLight?'Підсвічування активоване.':'Підсвічування вимкнене.');
+}
+function toggleWinter(){
+ winter=!winter;setSwitch('winterSwitch',winter);
+ robotAction(winter?'Зимовий режим активовано.':'Зимовий режим вимкнено.');
+}
+function toggleScan(){
+ scan=!scan;setSwitch('scanSwitch',scan);
+ robotAction(scan?'Сканування навколишнього середовища...':'Сканування зупинено.');
+ if(window.robotScan)window.robotScan(scan);
+}
+function robotAction(message){
+ document.getElementById('robotMessage').textContent=message;
+ if(window.robotPower)window.robotPower(robotPower);
+ if(window.robotMood)window.robotMood(scan);
+}
+
+/* MODULES */
+const moduleData={
+ 1:['ARDUINO BASICS','Arduino — це платформа для створення електронних пристроїв. На цьому модулі можна вивчити призначення плати, контактів живлення, цифрових та аналогових входів і виходів.'],
+ 2:['LED & LIGHT','Світлодіоди використовують для індикації та освітлення. Ти навчишся підключати їх через резистор, керувати станом та змінювати яскравість за допомогою PWM.'],
+ 3:['SENSORS','Датчики збирають інформацію про навколишнє середовище. Розглянемо вимірювання температури, освітленості, відстані та вологості.'],
+ 4:['PROGRAMMING','Основи програмування Arduino: змінні, типи даних, умови if, цикли for і while, функції setup() та loop().'],
+ 5:['ROBOTICS','Знайомство з сервоприводами, моторами, механізмами та принципами керування рухом роботизованих систем.'],
+ 6:['SMART PROJECTS','Об’єднання знань у власні проєкти: розумне освітлення, сигналізація, автоматична теплиця та інші пристрої.']
+};
+let currentModule=0;
+function openModule(id){
+ currentModule=id;
+ const data=moduleData[id];
+ document.getElementById('moduleNumber').textContent='MODULE 0'+id;
+ document.getElementById('moduleTitle').textContent=data[0];
+ document.getElementById('moduleDescription').textContent=data[1];
+ document.getElementById('moduleResult').textContent='';
+ document.getElementById('moduleDetail').classList.add('show');
+ document.getElementById('moduleDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeModule(){document.getElementById('moduleDetail').classList.remove('show')}
+function markModule(){
+ document.getElementById('moduleResult').textContent='✓ Модуль позначено як пройдений у цій демонстрації.';
+ toast('Навчальний модуль завершено!');
+}
+
+/* SIMULATOR */
+let leds=[false,false,false],sequenceTimer=null;
+function updateLeds(){
+ leds.forEach((v,i)=>document.getElementById('led'+(i+1)).classList.toggle('active',v));
+ document.getElementById('ledCount').textContent=leds.filter(Boolean).length;
+ document.getElementById('ledStatus').textContent=leds.some(Boolean)?'ON':'OFF';
+}
+function log(text){
+ document.getElementById('simLog').innerHTML=
+ 'SYSTEM / '+new Date().toLocaleTimeString('uk-UA')+'<br>'+text;
+}
+function setLed(n){
+ if(sequenceTimer){clearInterval(sequenceTimer);sequenceTimer=null}
+ leds[n-1]=!leds[n-1];updateLeds();
+ log('LED '+n+' → '+(leds[n-1]?'HIGH':'LOW'));
+}
+function allLeds(){
+ if(sequenceTimer){clearInterval(sequenceTimer);sequenceTimer=null}
+ leds=[false,false,false];updateLeds();log('ALL OUTPUTS → LOW');
+}
+function ledSequence(){
+ if(sequenceTimer){clearInterval(sequenceTimer);sequenceTimer=null}
+ allLeds();
+ let i=0;
+ log('SEQUENCE STARTED...');
+ sequenceTimer=setInterval(()=>{
+  leds=[false,false,false];
+  leds[i%3]=true;updateLeds();
+  log('SEQUENCE / LED '+(i%3+1)+' → HIGH');
+  i++;
+  if(i>=9){
+   clearInterval(sequenceTimer);sequenceTimer=null;
+   setTimeout(()=>{allLeds();log('SEQUENCE COMPLETE');},400);
+  }
+ },450);
+}
+
+/* COPY CODE */
+async function copyCode(){
+ const code=`void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+
+  digitalWrite(13, LOW);
+  delay(1000);
+}`;
+ try{
+  await navigator.clipboard.writeText(code);
+  toast('Код скопійовано!');
+ }catch(e){
+  const area=document.createElement('textarea');
+  area.value=code;document.body.appendChild(area);
+  area.select();
+  try{document.execCommand('copy');toast('Код скопійовано!')}
+  catch(err){toast('Скопіюй код вручну')}
+  area.remove();
+ }
+}
+
+/* MODAL */
+function showModal(title,text){
+ document.getElementById('modalTitle').textContent=title;
+ document.getElementById('modalText').textContent=text;
+ document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+
+/* SOUND SWITCH */
+let soundEnabled=false;
+function toggleSound(){
+ soundEnabled=!soundEnabled;
+ toast(soundEnabled?'Звук увімкнено':'Звук вимкнено');
+}
+
+/* 3D WORLD */
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const canvas=document.getElementById('world');
+let scene,camera,renderer,robot,robotHead,robotEyes=[],robotGlow;
+let board,boardGroup,garland,garlandBulbs=[];
+let snowPoints,particles;
+let mouseX=0,mouseY=0;
+let scanMode=false;
+let lightsOn=true;
+let powerOn=true;
+let clock3D=new THREE.Clock();
+
+try{
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x050a12);
+ scene.fog=new THREE.FogExp2(0x050a12,.035);
+
+ camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,100);
+ camera.position.set(0,2.6,10.8);
+
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.15;
+
+ const hemi=new THREE.HemisphereLight(0xb9eaff,0x07111b,2.1);
+ scene.add(hemi);
+ const keyLight=new THREE.DirectionalLight(0xd9f5ff,3.1);
+ keyLight.position.set(4,8,6);
+ keyLight.castShadow=true;
+ scene.add(keyLight);
+ const blueLight=new THREE.PointLight(0x36aaff,55,15);
+ blueLight.position.set(-4,2,2);scene.add(blueLight);
+ const purpleLight=new THREE.PointLight(0x986dff,45,13);
+ purpleLight.position.set(4,1,-3);scene.add(purpleLight);
+ const floorLight=new THREE.PointLight(0x50eaff,30,12);
+ floorLight.position.set(0,.1,2);scene.add(floorLight);
+
+ function mat(color,metal=0,rough=.4,emissive=0x000000,intensity=0){
+  return new THREE.MeshStandardMaterial({
+   color,metalness:metal,roughness:rough,
+   emissive,emissiveIntensity:intensity
+  });
+ }
+ const silver=mat(0xc4d9e8,.8,.24);
+ const dark=mat(0x101c2a,.8,.3);
+ const white=mat(0xeaf7ff,.45,.25);
+ const cyan=mat(0x57eaff,.35,.2,0x20cfff,2.5);
+ const blue=mat(0x256caa,.7,.25);
+ const green=mat(0x50ffc2,.3,.2,0x18ffad,2);
+ const gold=mat(0xc6a65c,.75,.25);
+ const black=mat(0x03080d,.3,.3);
+
+ function box(parent,w,h,d,material,x,y,z,bevel=false){
+  let geo=new THREE.BoxGeometry(w,h,d);
+  let mesh=new THREE.Mesh(geo,material);
+  mesh.position.set(x,y,z);
+  mesh.castShadow=true;mesh.receiveShadow=true;
+  parent.add(mesh);return mesh;
+ }
+ function sphere(parent,r,material,x,y,z){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,18),material);
+  m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
+ }
+ function cylinder(parent,r1,r2,h,material,x,y,z,segments=32){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments),material);
+  m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;
+ }
+
+ // FLOOR / PLATFORM
+ const floor=new THREE.Mesh(
+  new THREE.PlaneGeometry(200,200),
+  new THREE.MeshStandardMaterial({color:0x07111c,roughness:.3,metalness:.5})
+ );
+ floor.rotation.x=-Math.PI/2;floor.position.y=-.15;floor.receiveShadow=true;
+ scene.add(floor);
+
+ const platform=new THREE.Group();scene.add(platform);
+ cylinder(platform,2.15,2.25,.32,dark,0,.05,0,80);
+ cylinder(platform,2.04,2.04,.08,blue,0,.25,0,80);
+ cylinder(platform,1.94,1.94,.05,dark,0,.32,0,80);
+ const ring=new THREE.Mesh(
+  new THREE.TorusGeometry(2.08,.025,8,100),
+  cyan
+ );
+ ring.rotation.x=Math.PI/2;ring.position.y=.23;platform.add(ring);
+ const ring2=new THREE.Mesh(
+  new THREE.TorusGeometry(1.75,.012,8,100),
+  mat(0x3a83a9,.5,.3,0x1766a0,1.3)
+ );
+ ring2.rotation.x=Math.PI/2;ring2.position.y=.35;platform.add(ring2);
+
+ // ROBOT
+ robot=new THREE.Group();scene.add(robot);
+ robot.position.set(.4,.4,.1);
+
+ const torso=box(robot,1.05,1.1,.7,white,0,1.65,0);
+ const torsoFront=box(robot,.48,.43,.04,dark,0,1.72,.37);
+ const core=sphere(robot,.18,cyan,0,1.73,.42);
+ const coreRing=new THREE.Mesh(new THREE.TorusGeometry(.27,.025,8,48),cyan);
+ coreRing.position.set(0,1.73,.43);robot.add(coreRing);
+
+ // chest details
+ for(let i=0;i<3;i++){
+  sphere(robot,.035,i===0?green:i===1?gold:cyan,-.35+i*.12,1.28,.38);
+ }
+ box(robot,.33,.05,.05,blue,0,1.08,.39);
+
+ // neck
+ cylinder(robot,.16,.18,.23,dark,0,2.27,0);
+ const neckRing=new THREE.Mesh(new THREE.TorusGeometry(.18,.025,8,32),gold);
+ neckRing.position.y=2.28;robot.add(neckRing);
+
+ // HEAD
+ robotHead=new THREE.Group();robotHead.position.set(0,2.85,0);robot.add(robotHead);
+ const head=box(robotHead,1.25,.83,.82,white,0,0,0);
+ const face=box(robotHead,.91,.42,.055,black,0,-.04,.43);
+ const eyeMaterial=mat(0x59eaff,.2,.15,0x2bdcff,3.5);
+ for(const x of [-.25,.25]){
+  const eye=sphere(robotHead,.075,eyeMaterial,x,.02,.48);
+  robotEyes.push(eye);
+ }
+ const mouth=box(robotHead,.2,.025,.025,cyan,0,-.23,.48);
+ // head side panels
+ box(robotHead,.08,.35,.65,blue,-.67,-.02,0);
+ box(robotHead,.08,.35,.65,blue,.67,-.02,0);
+
+ // antenna
+ cylinder(robotHead,.025,.025,.27,gold,0,.54,0);
+ sphere(robotHead,.09,mat(0xff7188,.2,.15,0xff3155,3),0,.7,0);
+
+ // ear modules
+ for(const x of [-.76,.76]){
+  const ear=cylinder(robotHead,.13,.13,.14,dark,x,0,0,24);
+  ear.rotation.z=Math.PI/2;
+  sphere(robotHead,.055,cyan,x*1.04,0,0);
+ }
+
+ // arms
+ const arms=[];
+ for(const side of [-1,1]){
+  const arm=new THREE.Group();
+  arm.position.set(side*.68,1.95,0);
+  robot.add(arm);arms.push(arm);
+  cylinder(arm,.13,.14,.35,dark,0,-.18,0);
+  const joint=sphere(arm,.18,blue,0,-.39,0);
+  const fore=box(arm,.19,.53,.22,silver,0,-.68,0);
+  sphere(arm,.14,cyan,0,-.98,.03);
+  const claw=box(arm,.28,.12,.25,dark,0,-1.1,.04);
+  box(arm,.08,.13,.08,silver,-.11,-1.19,.04);
+  box(arm,.08,.13,.08,silver,.11,-1.19,.04);
+ }
+ // legs
+ for(const x of [-.29,.29]){
+  cylinder(robot,.12,.14,.22,dark,x,1.05,0);
+  box(robot,.24,.56,.28,silver,x,.72,0);
+  box(robot,.32,.17,.46,blue,x,.37,.09);
+  box(robot,.28,.06,.38,cyan,x,.27,.09);
+ }
+
+ // GARLAND around robot
+ const garlandPoints=[];
+ for(let i=0;i<=240;i++){
+  const t=i/240;
+  const y=.75+t*3.25;
+  const radius=.64+Math.sin(t*Math.PI)*.08;
+  const angle=t*Math.PI*7.5;
+  garlandPoints.push(new THREE.Vector3(
+   Math.cos(angle)*radius,
+   y,
+   Math.sin(angle)*.46
+  ));
+ }
+ const garlandCurve=new THREE.CatmullRomCurve3(garlandPoints);
+ const garlandGeo=new THREE.TubeGeometry(garlandCurve,300,.018,7,false);
+ const wire=new THREE.Mesh(garlandGeo,gold);
+ robot.add(wire);garland=wire;
+ for(let i=0;i<28;i++){
+  const t=i/28;
+  const p=garlandCurve.getPoint(t);
+  const colors=[0xff647e,0x70eaff,0xffdf84,0x6dffc4];
+  const bulbMat=mat(colors[i%4],.15,.18,colors[i%4],3);
+  const bulb=sphere(robot,.045,bulbMat,p.x,p.y,p.z);
+  garlandBulbs.push(bulb);
+ }
+
+ // SNOW ON ROBOT HEAD
+ const snowCap=new THREE.Mesh(
+  new THREE.SphereGeometry(.68,32,12,0,Math.PI*2,0,Math.PI*.23),
+  new THREE.MeshStandardMaterial({color:0xe8f7ff,roughness:.25})
+ );
+ snowCap.scale.set(1,.3,1);
+ snowCap.position.set(0,3.28,0);
+ robot.add(snowCap);
+
+ // FLOATING ARDUINO BOARD
+ boardGroup=new THREE.Group();scene.add(boardGroup);
+ boardGroup.position.set(-3.1,1.25,-.5);
+ boardGroup.rotation.set(.3,-.45,-.2);
+ const pcb=box(boardGroup,1.75,.13,1.05,mat(0x08765f,.4,.35),0,0,0);
+ box(boardGroup,.55,.13,.5,dark,.12,.11,0);
+ box(boardGroup,.28,.16,.35,mat(0x202b35,.7,.25),-.48,.12,.03);
+ // metallic pins
+ for(let i=0;i<10;i++){
+  box(boardGroup,.06,.13,.07,gold,-.7+i*.15,.13,.48);
+  box(boardGroup,.06,.13,.07,gold,-.7+i*.15,.13,-.48);
+ }
+ // USB port
+ box(boardGroup,.3,.2,.35,silver,-.9,.05,.05);
+ // board LEDs
+ sphere(boardGroup,.055,green,.67,.14,.35);
+ sphere(boardGroup,.055,cyan,.52,.14,.35);
+ // snow layer
+ const snowBoard=box(boardGroup,1.7,.025,.17,white,-.05,.1,-.38);
+ snowBoard.material.transparent=true;snowBoard.material.opacity=.8;
+
+ // FLOATING LABELS
+ function makeLabel(text,x,y,z){
+  const canvas2=document.createElement('canvas');
+  canvas2.width=512;canvas2.height=128;
+  const c=canvas2.getContext('2d');
+  c.fillStyle='#70eaff';c.font='bold 30px Arial';
+  c.fillText(text,10,70);
+  const texture=new THREE.CanvasTexture(canvas2);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true}));
+  sprite.position.set(x,y,z);sprite.scale.set(2.1,.52,1);
+  scene.add(sprite);return sprite;
+ }
+ const label1=makeLabel('ROBO UNIT / 001',.5,4.6,0);
+ const label2=makeLabel('ARDUINO CORE',-3.1,2.2,0);
+
+ // SNOW PARTICLES
+ const snowGeo=new THREE.BufferGeometry();
+ const count=650;
+ const positions=new Float32Array(count*3);
+ const velocities=[];
+ for(let i=0;i<count;i++){
+  positions[i*3]=(Math.random()-.5)*24;
+  positions[i*3+1]=Math.random()*13;
+  positions[i*3+2]=(Math.random()-.5)*18;
+  velocities.push(.3+Math.random()*.65);
+ }
+ snowGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+ const snowMat=new THREE.PointsMaterial({
+  color:0xdaf5ff,size:.035,transparent:true,opacity:.7,
+  depthWrite:false
+ });
+ snowPoints=new THREE.Points(snowGeo,snowMat);
+ scene.add(snowPoints);
+
+ // AMBIENT DUST
+ const dustGeo=new THREE.BufferGeometry();
+ const dustPositions=new Float32Array(220*3);
+ for(let i=0;i<220;i++){
+  dustPositions[i*3]=(Math.random()-.5)*18;
+  dustPositions[i*3+1]=Math.random()*8;
+  dustPositions[i*3+2]=(Math.random()-.5)*12;
+ }
+ dustGeo.setAttribute('position',new THREE.BufferAttribute(dustPositions,3));
+ const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({
+  color:0x59dfff,size:.018,transparent:true,opacity:.45
+ }));
+ scene.add(dust);
+
+ // LAB RINGS
+ const orbitGroup=new THREE.Group();scene.add(orbitGroup);
+ for(let i=0;i<3;i++){
+  const torus=new THREE.Mesh(
+   new THREE.TorusGeometry(2.6+i*.24,.008,5,150),
+   new THREE.MeshBasicMaterial({color:i===1?0x8b73ff:0x49bfe9,transparent:true,opacity:.25})
+  );
+  torus.rotation.x=Math.PI/2+(i*.12);
+  torus.position.y=-.02+i*.02;
+  orbitGroup.add(torus);
+ }
+
+ // ANIMATION
+ function animate(){
+  requestAnimationFrame(animate);
+  const t=clock3D.getElapsedTime();
+
+  if(robot){
+   robot.rotation.y=Math.sin(t*.35)*.16+mouseX*.16;
+   robot.position.y=.4+Math.sin(t*1.2)*.07;
+   robotHead.rotation.y=Math.sin(t*.7)*.12+mouseX*.07;
+   robotHead.rotation.x=mouseY*.06;
+   arms[0].rotation.z=Math.sin(t*1.1)*.08;
+   arms[1].rotation.z=-Math.sin(t*1.1)*.08;
+   coreRing.rotation.z=t*.65;
+   if(scanMode){
+    robotHead.rotation.y=Math.sin(t*3)*.38;
+   }
+   garlandBulbs.forEach((b,i)=>{
+    b.scale.setScalar(.8+Math.sin(t*4+i)*.25);
+   });
+  }
+  if(boardGroup){
+   boardGroup.rotation.y=-.45+Math.sin(t*.4)*.16;
+   boardGroup.position.y=1.25+Math.sin(t*.9)*.12;
+  }
+  orbitGroup.rotation.y=t*.045;
+  ring.rotation.z=t*.1;
+  if(snowPoints){
+   const p=snowPoints.geometry.attributes.position.array;
+   for(let i=0;i<count;i++){
+    p[i*3+1]-=velocities[i]*.009;
+    p[i*3]+=.002*Math.sin(t+i);
+    if(p[i*3+1]<-1){
+     p[i*3+1]=12;
+     p[i*3]=(Math.random()-.5)*24;
+    }
+   }
+   snowPoints.geometry.attributes.position.needsUpdate=true;
+  }
+  camera.position.x+=(mouseX*.5-camera.position.x)*.015;
+  camera.position.y+=(2.6+mouseY*.25-camera.position.y)*.015;
+  camera.lookAt(0,1.7,0);
+  renderer.render(scene,camera);
+ }
+ animate();
+
+ // Mouse movement
+ window.addEventListener('pointermove',e=>{
+  mouseX=(e.clientX/innerWidth-.5)*2;
+  mouseY=(e.clientY/innerHeight-.5)*2;
+ });
+
+ // Resize
+ window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ });
+
+ // Robot UI functions
+ window.robotSetLight=(on)=>{
+  lightsOn=on;
+  robotEyes.forEach(e=>e.material.emissiveIntensity=on?3.5:0);
+  core.material.emissiveIntensity=on?2.5:0;
+  garlandBulbs.forEach(b=>b.material.emissiveIntensity=on?3:0);
+ };
+ window.robotPower=(on)=>{
+  powerOn=on;
+  robot.traverse(o=>{
+   if(o.material&&o.material.emissive){
+    o.material.emissiveIntensity=on?Math.max(o.material.emissiveIntensity,.5):0;
+   }
+  });
+ };
+ window.robotScan=(on)=>{scanMode=on};
+ window.robotMood=(on)=>{
+  if(on)robotHead.rotation.z=.08;
+  else robotHead.rotation.z=0;
+ };
+
+ // Make the robot react to click
+ canvas.addEventListener('click',()=>{
+  if(!powerOn)return;
+  robotHead.rotation.z=.13;
+  setTimeout(()=>{if(robotHead)robotHead.rotation.z=0},450);
+  document.getElementById('robotMessage').textContent='ROBO: Я готовий до нових завдань!';
+ });
+
+ // Intro reveal
+ robot.scale.setScalar(.01);
+ let introStart=performance.now();
+ function intro(){
+  const p=Math.min((performance.now()-introStart)/1800,1);
+  const eased=1-Math.pow(1-p,3);
+  robot.scale.setScalar(eased);
+  if(p<1)requestAnimationFrame(intro);
+ }
+ intro();
+
+}catch(error){
+ console.error('3D scene error:',error);
+ document.getElementById('robotMessage').textContent='3D-сцену не вдалося завантажити. Перевір підключення до інтернету.';
+}
+</script>
+</body>
+</html>
